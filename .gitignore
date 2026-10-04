@@ -4,9 +4,10 @@ src-tauri/target/
 src-tauri/gen/schemas/
 release/
 
-# 系统文件
+# 系统与本地配置
 .DS_Store
 Thumbs.db
+.npmrc
 
 # 本地环境（勿提交密钥）
 .env
