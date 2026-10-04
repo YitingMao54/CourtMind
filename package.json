@@ -1,0 +1,16 @@
+{
+  "name": "guiren-duowangshi",
+  "version": "1.0.0",
+  "description": "贵人多忘事 · 微政务桌面软件（Tauri）",
+  "private": true,
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "author": "ITP 组队项目",
+  "license": "MIT",
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

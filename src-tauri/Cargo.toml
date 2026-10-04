@@ -1,0 +1,26 @@
+[package]
+name = "guiren-duowangshi"
+version = "1.0.0"
+description = "贵人多忘事 · 微政务桌面软件"
+authors = ["ITP 组队项目"]
+edition = "2021"
+
+# Tauri v2 的 lib + main 结构
+[lib]
+name = "guiren_duowangshi_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# 减小产物体积（对齐文档"轻量"要求）
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+opt-level = "s"
