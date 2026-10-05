@@ -1,6 +1,6 @@
 /* ================= flow.js：通政司（呈奏/意图识别）→ 上朝（辩论）→ 朱批 ================= */
 
-/* 提示词模板：接真实 DeepSeek 时直接使用 */
+/* 提示词模板：接真实大模型 API 时直接使用 */
 const PROMPTS = {
   seat(name, lens, question){
     return `你是${name}，是议事会中负责「${lens}」这一视角的臣子。议题：${question}
@@ -19,6 +19,33 @@ const PROMPTS = {
 不要任何前言、代码块或多余的话。`;
   }
 };
+
+/* ================= 主流大模型服务商（均为聊天补全 API；未配置 key 时回退固化数据） ================= */
+const PROVIDERS = {
+  deepseek: { name:'DeepSeek',        base:'https://api.deepseek.com/chat/completions',                                        model:'deepseek-chat',     style:'openai' },
+  kimi:     { name:'Kimi（月之暗面）', base:'https://api.moonshot.cn/v1/chat/completions',                                      model:'moonshot-v1-8k',    style:'openai' },
+  qwen:     { name:'通义千问',         base:'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',               model:'qwen-plus',         style:'openai' },
+  glm:      { name:'智谱 GLM',        base:'https://open.bigmodel.cn/api/paas/v4/chat/completions',                            model:'glm-4-flash',       style:'openai' },
+  openai:   { name:'OpenAI GPT',      base:'https://api.openai.com/v1/chat/completions',                                       model:'gpt-4o-mini',       style:'openai' },
+  gemini:   { name:'Google Gemini',   base:'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',         model:'gemini-2.0-flash',  style:'openai' },
+  claude:   { name:'Anthropic Claude',base:'https://api.anthropic.com/v1/messages',                                            model:'claude-sonnet-4-5', style:'anthropic' },
+};
+
+/* 读取设置（兼容旧版单 deepseekKey 存储，自动迁移到多服务商结构） */
+function getSettings(){
+  const s = LS.get(K.settings, {});
+  if(s.deepseekKey && !s.keys){ s.keys = { deepseek: s.deepseekKey }; }
+  s.keys = s.keys || {}; s.models = s.models || {}; s.active = s.active || 'deepseek';
+  return s;
+}
+/* 当前启用的服务商配置；未填 key 返回 null（走固化数据） */
+function activeProvider(){
+  const s = getSettings();
+  const p = PROVIDERS[s.active] || PROVIDERS.deepseek;
+  const key = (s.keys[s.active] || '').trim();
+  const model = (s.models[s.active] || '').trim() || p.model;
+  return key ? Object.assign({}, p, { key, model }) : null;
+}
 
 /* ================= 固化辩论数据（演示稳定用；接 API 后自动实时生成） ================= */
 const SCENARIOS = {
@@ -149,24 +176,40 @@ function routeIntent(text){
 }
 const ROUTE_MOD = { '决策类':'上朝', '文件类':'户部', '提醒类':'起居注' };
 
-/* ================= DeepSeek 实时辩论（可选；未配置 key 或失败时回退固化数据） ================= */
+/* ================= 实时辩论（可选；未配置 key 或失败时回退固化数据） ================= */
 async function fetchDebate(question){
-  const key = (LS.get(K.settings, {}).deepseekKey||'').trim();
-  if(!key) return null;
+  const P = activeProvider();
+  if(!P) return null;
   const call = async (sys, user) => {
     const ctrl = new AbortController();
     const timer = setTimeout(()=>ctrl.abort(), 45000);
     try{
-      const res = await fetch('https://api.deepseek.com/chat/completions', {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+key },
-        body: JSON.stringify({ model:'deepseek-chat', temperature:1.2,
-          messages:[{role:'system',content:sys},{role:'user',content:user}] }),
-        signal: ctrl.signal
-      });
-      if(!res.ok) throw new Error('HTTP '+res.status);
-      const j = await res.json();
-      const m = j.choices[0].message.content.match(/\{[\s\S]*\}/);
+      let text;
+      if(P.style === 'anthropic'){
+        const res = await fetch(P.base, {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', 'x-api-key':P.key,
+            'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
+          body: JSON.stringify({ model:P.model, temperature:1.2, max_tokens:2000,
+            system:sys, messages:[{role:'user',content:user}] }),
+          signal: ctrl.signal
+        });
+        if(!res.ok) throw new Error('HTTP '+res.status);
+        const j = await res.json();
+        text = (j.content||[]).map(c=>c.text||'').join('');
+      } else { // OpenAI 兼容格式：DeepSeek/Kimi/千问/GLM/GPT/Gemini 通用
+        const res = await fetch(P.base, {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+P.key },
+          body: JSON.stringify({ model:P.model, temperature:1.2,
+            messages:[{role:'system',content:sys},{role:'user',content:user}] }),
+          signal: ctrl.signal
+        });
+        if(!res.ok) throw new Error('HTTP '+res.status);
+        const j = await res.json();
+        text = j.choices[0].message.content;
+      }
+      const m = String(text).match(/\{[\s\S]*\}/);
       if(!m) throw new Error('返回非 JSON');
       return JSON.parse(m[0]);
     } finally { clearTimeout(timer); }
@@ -202,7 +245,7 @@ async function fetchDebate(question){
 /* ================= 呈奏视图 ================= */
 registerView('flow', function renderFlow(){
   const s = document.createElement('section');
-  const settings = LS.get(K.settings, {});
+  const st = getSettings();
   s.innerHTML = `
     <header><h2>呈奏</h2><p>写下你的烦心事，通政司识别类别并转呈对应衙门。</p></header>
     <div class="card"><h3>通政司 · 上书房</h3>
@@ -211,9 +254,14 @@ registerView('flow', function renderFlow(){
       <button class="btn" id="submit">呈 奏</button>
       <div class="settings">
         <div class="row">
-          <span>⚡ 臣子直谏（DeepSeek 实时辩论，留空则用固化数据）：</span>
-          <input type="password" id="ds-key" placeholder="sk-...（仅存本机 localStorage，不会上传）" value="${escapeHtml(settings.deepseekKey||'')}">
+          <span>⚡ 臣子直谏（选服务商并填 API Key 后，新议题将实时辩论；Key 仅存本机，留空则用固化数据）：</span>
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <select id="ds-provider">${Object.entries(PROVIDERS).map(([id,p])=>`<option value="${id}" ${st.active===id?'selected':''}>${p.name}</option>`).join('')}</select>
+          <input type="password" id="ds-key" placeholder="API Key（sk-...）" value="${escapeHtml(st.keys[st.active]||'')}">
+          <input type="text" id="ds-model" placeholder="模型名（留空用默认）" value="${escapeHtml(st.models[st.active]||'')}">
           <button class="btn small secondary" id="ds-save">保存</button>
+          <span id="ds-status" class="muted-note" style="margin-top:0;"></span>
         </div>
       </div>
     </div>
@@ -222,11 +270,25 @@ registerView('flow', function renderFlow(){
   const stage = document.getElementById('stage');
   const input = document.getElementById('input');
 
-  s.querySelector('#ds-save').addEventListener('click', ()=>{
-    const v = s.querySelector('#ds-key').value.trim();
-    LS.set(K.settings, Object.assign(LS.get(K.settings,{}), {deepseekKey:v}));
-    s.querySelector('#ds-save').textContent = v ? '已启用 ✓' : '已停用';
+  // 切换服务商时，回填该服务商已保存的 key 与模型
+  function dsStatus(){
+    const p = activeProvider();
+    s.querySelector('#ds-status').textContent = p ? `已启用：${p.name} · ${p.model}` : '未启用（用固化数据）';
+  }
+  s.querySelector('#ds-provider').addEventListener('change', e=>{
+    const id = e.target.value, cur = getSettings();
+    s.querySelector('#ds-key').value = cur.keys[id]||'';
+    s.querySelector('#ds-model').value = cur.models[id]||'';
   });
+  s.querySelector('#ds-save').addEventListener('click', ()=>{
+    const id = s.querySelector('#ds-provider').value, cur = getSettings();
+    cur.active = id;
+    cur.keys[id] = s.querySelector('#ds-key').value.trim();
+    cur.models[id] = s.querySelector('#ds-model').value.trim();
+    LS.set(K.settings, cur);
+    dsStatus();
+  });
+  dsStatus();
 
   function go(q){
     const text = (q || input.value || '').trim();
@@ -246,11 +308,12 @@ registerView('flow', function renderFlow(){
       if(intent!=='决策类'){ showNonDebate(stage, intent); return; }
       const cached = SCENARIOS[q || text];
       if(cached){ runCouncil(stage, cached, text, token, false); return; }
-      // 未命中的新问题：先试 DeepSeek，再回退固化数据
-      if((LS.get(K.settings,{}).deepseekKey||'').trim()){
+      // 未命中的新问题：已启用大模型则实时议事，否则回退固化数据
+      const P = activeProvider();
+      if(P){
         const loading = document.createElement('div');
         loading.className = 'loading-note';
-        loading.textContent = '通政司：新议题，正召集群臣实时议事（DeepSeek）…';
+        loading.textContent = `通政司：新议题，正召集群臣实时议事（${P.name} · ${P.model}）…`;
         stage.appendChild(loading);
         fetchDebate(text).then(data=>{
           if(token!==animToken) return;
