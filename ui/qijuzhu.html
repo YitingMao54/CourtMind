@@ -8,7 +8,9 @@
   *{box-sizing:border-box; margin:0; padding:0;}
   html,body{height:100%;}
   body{font-family:"Noto Serif SC","Songti SC","SimSun",serif; background:var(--red-deep); color:#f3e7d0; border-radius:12px; overflow:hidden; display:flex; flex-direction:column;}
-  header{display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:rgba(0,0,0,.25); cursor:default; user-select:none;}
+  header{display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:rgba(0,0,0,.25); cursor:grab; user-select:none;}
+  header:active{cursor:grabbing;}
+  .clock{cursor:grab;}
   header .title{font-size:13px; letter-spacing:2px; color:#f6e7c1;}
   header button{background:none; border:none; color:#d9c9a6; font-size:15px; cursor:pointer; padding:2px 6px; font-family:inherit;}
   header button:hover{color:#fff;}
@@ -24,7 +26,7 @@
 </style>
 </head>
 <body>
-<header data-tauri-drag-region>
+<header>
   <span class="title">📖 起居注</span>
   <button id="close" title="关闭">✕</button>
 </header>
@@ -53,6 +55,19 @@ document.getElementById('close').addEventListener('click', ()=>{
   if(window.__TAURI__ && window.__TAURI__.window){ window.__TAURI__.window.getCurrentWindow().close(); }
   else window.close();
 });
+
+/* 手动拖动：标题栏 / 时钟区按下即拖（data-tauri-drag-region 对子元素不生效，故自行绑定） */
+function bindDrag(el){
+  el.addEventListener('mousedown', e=>{
+    if(e.button!==0) return;
+    if(e.target.closest && e.target.closest('#close')) return; // 关闭按钮不触发拖动
+    const W = window.__TAURI__ && window.__TAURI__.window;
+    if(W){ try{ W.getCurrentWindow().startDragging(); }catch(err){} }
+  });
+}
+bindDrag(document.querySelector('header'));
+bindDrag(document.querySelector('.clock'));
+
 tick(); renderList();
 setInterval(tick, 10000);
 setInterval(renderList, 30000); // 悬浮窗与主窗口共享 localStorage，定期同步

@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "主窗口与起居注悬浮窗的权限（文件操作全部经 Rust 命令完成，前端仅授予核心与窗口关闭权限）",
   "windows": ["main", "qijuzhu"],
-  "permissions": ["core:default", "core:window:allow-close"]
+  "permissions": ["core:default", "core:window:allow-close", "core:window:allow-start-dragging"]
 }
