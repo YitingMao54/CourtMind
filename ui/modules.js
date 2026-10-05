@@ -6,7 +6,7 @@ registerView('hu', async function renderHu(){
   const s = document.createElement('section');
   s.innerHTML = `<header><h2>户部 · 文件整理</h2><p>扫描文件夹并按「课件与文献 / 素材 / 安装包与压缩包 / 表格 / 其他」归档。<b style="color:var(--red-deep)">只移动、不删除</b>，每一步皆可在刑部回滚。</p></header>
     <div class="card">
-      <h3>📁 整理目标</h3>
+      <h3>整理目标</h3>
       <div class="toolbar">
         <input type="text" id="folder" placeholder="文件夹绝对路径，例：C:\\Users\\你\\Downloads">
         <button class="btn small" id="scan">扫描预览</button>
@@ -68,7 +68,7 @@ registerView('hu', async function renderHu(){
 registerView('xing', async function renderXing(){
   const invoke = tauriInvoke();
   const s = document.createElement('section');
-  s.innerHTML = `<header><h2>刑部·大理寺 · 审计回滚</h2><p>户部每一次文件移动均在此留痕（最多 200 条），可逐条一键回滚，全程可溯。</p></header>
+  s.innerHTML = `<header><h2>刑部 · 大理寺 · 审计回滚</h2><p>户部每一次文件移动均在此留痕（最多 200 条），可逐条一键回滚，全程可溯。</p></header>
     <div class="card"><div id="ledger"><p class="placeholder">读取台账中…</p></div></div>`;
   main.appendChild(s);
   const box = s.querySelector('#ledger');
@@ -110,7 +110,8 @@ registerView('log', function renderLog(){
   const log = LS.get(K.log, []);
   s.innerHTML = `<header><h2>起居注 · 决策记录</h2><p>记录朕的每一次裁决，形成产品的记忆层。</p></header>
     <div class="card">
-      <div class="toolbar"><button class="btn small" id="overlay">🖥️ 打开桌面悬浮窗</button>
+      <div class="toolbar"><button class="btn small" id="overlay">打开桌面悬浮窗</button>
+      <button class="btn small" id="pet" style="background:#c9756b;">召唤桌宠 · 云绾</button>
       <button class="btn small secondary" id="clear-log">清空起居注</button></div>
       ${log.length ? log.map(e=>`
       <div class="log-item">
@@ -127,6 +128,11 @@ registerView('log', function renderLog(){
     const invoke = tauriInvoke();
     if(!invoke){ alert('悬浮窗仅桌面应用可用。'); return; }
     try{ await invoke('open_qijuzhu'); }catch(e){ alert('悬浮窗打开失败：'+e); }
+  });
+  s.querySelector('#pet').addEventListener('click', async ()=>{
+    const invoke = tauriInvoke();
+    if(!invoke){ alert('桌宠仅桌面应用可用。'); return; }
+    try{ await invoke('open_pet'); }catch(e){ alert('桌宠打开失败：'+e); }
   });
 });
 
@@ -165,7 +171,7 @@ registerView('jian', function renderJian(){
         <div class="stat"><b>${d.debates}</b><span>今日议事（次）</span></div>
         <div class="stat"><b>${adv.length}</b><span>累计规谏（条）</span></div>
       </div>
-      <h3>📜 规谏记录</h3>
+      <h3>规谏记录</h3>
       ${adv.length ? adv.map(a=>`<div class="adv ${a.type==='熬夜'?'warn':''}"><div class="t">${escapeHtml(a.time)} · ${escapeHtml(a.type)}</div>${escapeHtml(a.text)}</div>`).join('')
         : '<p class="placeholder">陛下起居有度，暂无规谏。</p>'}
       <p class="muted-note">规谏规则：深夜（0-6 点）使用即谏；单日使用满 45 分钟谏休息；单日议事满 5 次谏勿过度依赖。</p>

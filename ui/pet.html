@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>云绾 · 桌宠</title>
+<style>
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%; background:transparent; overflow:hidden; user-select:none;}
+  body{font-family:"Noto Serif SC","Songti SC","SimSun",serif;}
+  #stage{position:absolute; inset:0; cursor:grab; display:flex; align-items:flex-end; justify-content:center;}
+  #stage:active{cursor:grabbing;}
+
+  /* 双层结构：wrap 负责位移/跳跃，sprite 负责变形/旋转 —— 两层动画叠加出连贯动作 */
+  .pet-wrap{position:relative; margin-bottom:8px; will-change:transform;}
+  #sprite{
+    display:block;
+    /* --sw/--sh 由滚轮缩放控制（初始 206/236） */
+    max-width:var(--sw,206px); max-height:var(--sh,236px); width:auto; height:auto;
+    filter:drop-shadow(0 6px 8px rgba(90,40,35,.25));
+    will-change:transform;
+  }
+
+  /* ============ 缩放反馈：弹性涨缩 ============ */
+  .act-resize #sprite{animation:sResize .45s cubic-bezier(.3,1.6,.4,1) 1 !important;}
+  @keyframes sResize{
+    0%{transform:scale(1,1)} 40%{transform:scale(1.1,.92)} 70%{transform:scale(.96,1.03)} 100%{transform:scale(1,1)}
+  }
+
+  /* ============ 状态间连贯变形（弹性变身） ============ */
+  /* 离场：压缩扭转收拢 */
+  #sprite.swap-out{
+    transform:scale(.86,.78) rotate(-4deg); opacity:.35;
+    transition:transform .14s ease-in, opacity .14s ease-in;
+  }
+  /* 入场：回弹过冲（优先级需盖过状态循环动画） */
+  #sprite.swap-in{animation:sMorphIn .36s cubic-bezier(.25,1.55,.45,1) !important; opacity:1;}
+  @keyframes sMorphIn{
+    0%{transform:scale(.88,.8) rotate(3deg); opacity:.35}
+    55%{transform:scale(1.06,.94) rotate(-1.5deg); opacity:1}
+    78%{transform:scale(.98,1.02) rotate(.5deg)}
+    100%{transform:scale(1,1) rotate(0)}
+  }
+  /* 变身期间：尺寸补间 + 循环动画暂停（防跳帧） */
+  .morphing #sprite{transition:width .32s cubic-bezier(.3,1.2,.4,1), height .32s cubic-bezier(.3,1.2,.4,1);}
+  .morphing .pet-wrap, .morphing #sprite{animation-play-state:paused !important;}
+  #sprite.swap-in{animation-play-state:running !important;}
+
+  /* ============ 待机：重心浮沉 + 呼吸（双层叠加） ============ */
+  .st-idle .pet-wrap{animation:wBob 3.2s ease-in-out infinite;}
+  @keyframes wBob{0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)}}
+  .st-idle #sprite{animation:sBreath 3.2s ease-in-out infinite;}
+  @keyframes sBreath{0%,100%{transform:scale(1,1)} 50%{transform:scale(1.008,1.015)}}
+
+  /* ============ 开心：两段跳 + 落地挤压 ============ */
+  .st-happy .pet-wrap{animation:wJump 1.15s cubic-bezier(.4,.1,.5,.9) infinite;}
+  @keyframes wJump{
+    0%{transform:translateY(0)} 32%{transform:translateY(-26px)}
+    52%{transform:translateY(0)} 70%{transform:translateY(-11px)}
+    86%{transform:translateY(0)} 100%{transform:translateY(0)}
+  }
+  .st-happy #sprite{animation:sSquash 1.15s ease-in-out infinite;}
+  @keyframes sSquash{
+    0%{transform:scale(1,1)} 20%{transform:scale(.96,1.05)}       /* 蓄力拉伸 */
+    46%{transform:scale(1.04,.96)}                                  /* 腾空伸展 */
+    58%{transform:scale(1.1,.88)}                                    /* 落地挤压 */
+    72%{transform:scale(.98,1.03)}                                   /* 回弹 */
+    100%{transform:scale(1,1)}
+  }
+
+  /* ============ 害羞：扭身躲闪 + 高频小颤 ============ */
+  .st-shy .pet-wrap{animation:wDodge 2s ease-in-out infinite;}
+  @keyframes wDodge{0%,100%{transform:rotate(0) translateX(0)} 30%{transform:rotate(-5deg) translateX(-9px)} 70%{transform:rotate(-3deg) translateX(-5px)}}
+  .st-shy #sprite{animation:sQuiver .32s ease-in-out infinite;}
+  @keyframes sQuiver{0%,100%{transform:rotate(0)} 50%{transform:rotate(1.6deg)}}
+
+  /* ============ 惊讶：后仰一惊 + 快速弹动 ============ */
+  .st-surprised .pet-wrap{animation:wStartle .7s ease-out infinite;}
+  @keyframes wStartle{0%{transform:translateY(0)} 30%{transform:translateY(-9px) scale(1.02)} 100%{transform:translateY(0)}}
+  .st-surprised #sprite{animation:sShake .4s ease-in-out infinite;}
+  @keyframes sShake{0%,100%{transform:rotate(0)} 25%{transform:rotate(2.4deg)} 75%{transform:rotate(-2.4deg)}}
+
+  /* ============ 问候：行礼起伏 + 裙摆式摇摆 ============ */
+  .st-wave .pet-wrap{animation:wGreet 1.5s ease-in-out infinite;}
+  @keyframes wGreet{0%,100%{transform:translateY(0) rotate(0)} 35%{transform:translateY(-7px) rotate(-3deg)} 70%{transform:translateY(-2px) rotate(2.5deg)}}
+  .st-wave #sprite{animation:sWave 0.75s ease-in-out infinite;}
+  @keyframes sWave{0%,100%{transform:rotate(-1.5deg)} 50%{transform:rotate(1.5deg)}}
+
+  /* ============ 安睡：深呼吸 + 偶尔翻身，附 Zzz ============ */
+  .st-sleep .pet-wrap{animation:wBreathSlow 4.8s ease-in-out infinite;}
+  @keyframes wBreathSlow{0%,100%{transform:translateY(0) scale(1,1)} 50%{transform:translateY(3px) scale(1.01,.985)}}
+  .st-sleep #sprite{animation:sToss 9s ease-in-out infinite;}
+  @keyframes sToss{0%,88%,100%{transform:rotate(0)} 93%{transform:rotate(2.5deg)}}
+
+  /* ============ 读书：缓慢点头翻页 ============ */
+  .st-read .pet-wrap{animation:wBob 4.5s ease-in-out infinite;}
+  .st-read #sprite{animation:sNod 4s ease-in-out infinite;}
+  @keyframes sNod{0%,100%{transform:rotate(0)} 45%{transform:rotate(2deg)} 60%{transform:rotate(1.2deg)}}
+
+  /* ============ 拖拽：被拎起挣扎 ============ */
+  .dragging .pet-wrap{animation:none; transform:translateY(-4px);}
+  .dragging #sprite{animation:sStruggle .28s ease-in-out infinite;}
+  @keyframes sStruggle{0%,100%{transform:rotate(7deg)} 50%{transform:rotate(11deg) scale(1.02)}}
+  /* 松手回弹 */
+  .landing #sprite{animation:sLand .6s cubic-bezier(.2,1.6,.4,1) 1;}
+  @keyframes sLand{0%{transform:rotate(8deg) scale(1.08,.9)} 60%{transform:rotate(-2deg) scale(.97,1.04)} 100%{transform:rotate(0) scale(1,1)}}
+
+  /* ============ 出场 / 退场 ============ */
+  .enter .pet-wrap{animation:wDrop .95s cubic-bezier(.3,1.25,.45,1) 1;}
+  @keyframes wDrop{0%{transform:translateY(-70px) scale(.55); opacity:0} 55%{transform:translateY(0) scale(1.06,.9); opacity:1} 75%{transform:translateY(-9px) scale(.98,1.03)} 100%{transform:translateY(0) scale(1)}}
+  .exit .pet-wrap{animation:wSpinOut .4s ease-in 1 forwards;}
+  @keyframes wSpinOut{to{transform:translateY(26px) rotate(38deg) scale(.1); opacity:0}}
+
+  /* ============ 待机自发小动作（行为引擎触发，一次性类） ============ */
+  .act-glance #sprite{animation:sGlance .7s ease-in-out 1 !important;}
+  @keyframes sGlance{0%,100%{transform:rotate(0)} 40%{transform:rotate(-5deg) translateX(-3px)}}
+  .act-lookback #sprite{animation:sLookback .8s ease-in-out 1 !important;}
+  @keyframes sLookback{0%,100%{transform:rotate(0)} 45%{transform:rotate(6deg) translateX(4px)}}
+  .act-hop .pet-wrap{animation:wHop .65s ease-out 1 !important;}
+  @keyframes wHop{0%,100%{transform:translateY(0)} 40%{transform:translateY(-16px)}}
+  .act-stretch #sprite{animation:sStretch 1.3s ease-in-out 1 !important;}
+  @keyframes sStretch{0%,100%{transform:scale(1,1)} 45%{transform:scale(.94,1.09)} 65%{transform:scale(1.03,.97)}}
+
+  /* ============ 环绕花瓣（持续生命感） ============ */
+  .petals{position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:5;}
+  .petal{
+    position:absolute; top:-16px; width:9px; height:12px;
+    background:radial-gradient(circle at 30% 30%, #f8c8d4, #efa4b4);
+    border-radius:60% 40% 55% 45%/50% 60% 40% 50%;
+    opacity:0; animation:pFall linear infinite;
+  }
+  @keyframes pFall{
+    0%{transform:translate(0,-16px) rotate(0); opacity:0}
+    12%{opacity:.85}
+    85%{opacity:.5}
+    100%{transform:translate(var(--dx),300px) rotate(300deg); opacity:0}
+  }
+
+  /* ============ 睡觉 Zzz ============ */
+  .zz{position:absolute; right:28px; top:64px; pointer-events:none; z-index:6; display:none;}
+  .st-sleep .zz{display:block;}
+  .zz span{
+    position:absolute; font-size:15px; font-weight:700; color:#8a7f6a;
+    opacity:0; animation:zFloat 2.7s ease-out infinite;
+  }
+  .zz span:nth-child(2){animation-delay:.9s; font-size:12px;}
+  .zz span:nth-child(3){animation-delay:1.8s; font-size:10px;}
+  @keyframes zFloat{0%{opacity:0; transform:translate(0,0) scale(.6)} 25%{opacity:.9} 100%{opacity:0; transform:translate(10px,-34px) scale(1.1)}}
+
+  /* ============ 对话气泡 ============ */
+  #bubble{
+    position:absolute; top:10px; left:50%; transform:translateX(-50%) translateY(6px);
+    max-width:190px; padding:7px 11px; background:#fffdf5; color:#5c3a33;
+    border:1px solid #c9756b; border-radius:10px; font-size:12px; line-height:1.6;
+    box-shadow:0 2px 8px rgba(92,20,20,.18); opacity:0; pointer-events:none;
+    transition:opacity .25s, transform .25s; text-align:center; z-index:10;
+  }
+  #bubble.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  #bubble::after{
+    content:''; position:absolute; bottom:-6px; left:50%; margin-left:-5px;
+    border-left:5px solid transparent; border-right:5px solid transparent; border-top:6px solid #c9756b;
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="petals" id="petals"></div>
+  <div id="bubble"></div>
+  <div class="zz"><span>Z</span><span>Z</span><span>Z</span></div>
+  <div class="pet-wrap enter"><img id="sprite" src="pet_sprites/idle.png" alt="云绾" draggable="false"></div>
+</div>
+
+<script>
+/* ============ 云绾 · 桌宠（切片精灵 + 连贯动作引擎） ============ */
+const stage = document.getElementById('stage');
+const wrap = document.querySelector('.pet-wrap');
+const sprite = document.getElementById('sprite');
+const bubbleEl = document.getElementById('bubble');
+
+const PHRASES = {
+  greet:  ['臣女云绾，愿为陛下分忧～', '陛下万福金安，云绾这厢有礼。'],
+  happy:  ['承蒙陛下惦记，云绾欢喜！', '陛下今日也元气满满呢～', '愿做书桌一抹清风，伴陛下左右。'],
+  shy:    ['陛、陛下莫要盯着人家看呀…', '再这样，云绾要脸红了啦。'],
+  surprised: ['呀！陛下唤我？', '哎？可是有要事吩咐？'],
+  wave:   ['陛下慢走，云绾在此候着～', '得令！云绾随侍在侧。'],
+  read:   ['云绾这就去翻翻典籍，稍候～', '书中自有黄金屋，陛下且宽心。'],
+  wake:   ['唔…夜深了，陛下也早些安歇罢…', '三更天了，陛下莫要再劳神…'],
+  ruling: ['陛下圣裁英明！臣女已记入起居注啦。', '又了结一桩心事，陛下真英明～']
+};
+
+let moodTimer = null, bubbleTimer = null, actTimer = null;
+const isNight = () => { const h = new Date().getHours(); return h >= 0 && h < 6; };
+const baseState = () => isNight() ? 'sleep' : 'idle';
+const pick = a => a[Math.floor(Math.random() * a.length)];
+
+/* ---------- 滚轮缩放：云绾变大变小，窗口跟随且脚下位置不动 ---------- */
+const BASE_W = 206, BASE_H = 236, SCALE_MIN = 0.5, SCALE_MAX = 2;
+let petScale = parseFloat(localStorage.getItem('grdws_pet_scale'));
+if (!(petScale > 0)) petScale = 1;
+
+function applyScale(){
+  document.documentElement.style.setProperty('--sw', Math.round(BASE_W * petScale) + 'px');
+  document.documentElement.style.setProperty('--sh', Math.round(BASE_H * petScale) + 'px');
+}
+applyScale();
+
+async function resizeWindowTo(scale){
+  const W = window.__TAURI__ && window.__TAURI__.window;
+  if (!W) return;
+  try{
+    const win = W.getCurrentWindow();
+    const pos = await win.position();          // 物理像素
+    const cur = await win.outerSize();         // 物理像素
+    const dpr = window.devicePixelRatio || 1;
+    /* 基准窗口 220×280 对应 scale=1，按比例换算并保持底边锚定（右下扩展/收缩） */
+    const newW = Math.round(220 * scale * dpr), newH = Math.round(280 * scale * dpr);
+    await win.setSize(new W.PhysicalSize(newW, newH));
+    await win.setPosition(new W.PhysicalPosition(pos.x + cur.width - newW, pos.y + cur.height - newH));
+  }catch(e){ /* 非 Tauri 环境忽略 */ }
+}
+/* 启动时按记忆尺寸恢复窗口（不做位置动画） */
+resizeWindowTo(petScale);
+
+let wheelLock = 0;
+stage.addEventListener('wheel', e => {
+  e.preventDefault();
+  const now = Date.now();
+  if (now - wheelLock < 90) return;            // 节流，避免滚轮事件过密
+  wheelLock = now;
+  const dir = e.deltaY < 0 ? 1 : -1;
+  const next = Math.min(SCALE_MAX, Math.max(SCALE_MIN, Math.round((petScale + dir * 0.1) * 10) / 10));
+  if (next === petScale) return;
+  petScale = next;
+  localStorage.setItem('grdws_pet_scale', String(petScale));
+  applyScale();
+  resizeWindowTo(petScale);
+  /* 缩放反馈：一段弹性涨缩 + 台词 */
+  wrap.classList.remove('act-resize');
+  void wrap.offsetWidth;
+  wrap.classList.add('act-resize');
+  say(petScale > 1 ? '呀，云绾长大了一些～' : '嗯，小巧些也挺好～', 1500);
+}, { passive: false });
+
+/* 状态切换编排：压缩收拢(140ms) → 换切片 + 尺寸补间 → 回弹过冲(360ms)
+   全程循环动画暂停，避免帧相位跳变；用 token 防快速连续切换的竞态 */
+let morphToken = 0;
+function fitSize(img){
+  /* 计算切片在当前缩放约束下的目标显示尺寸 */
+  const r = Math.min(BASE_W * petScale / img.naturalWidth, BASE_H * petScale / img.naturalHeight);
+  return { w: Math.round(img.naturalWidth * r), h: Math.round(img.naturalHeight * r) };
+}
+function setState(s){
+  stage.className = 'st-' + s;
+  if (sprite.dataset.state === s) return;
+  sprite.dataset.state = s;
+
+  const token = ++morphToken;
+  const w0 = sprite.offsetWidth || 200, h0 = sprite.offsetHeight || 200;   // 当前显示尺寸
+  wrap.classList.add('morphing');
+  sprite.classList.add('swap-out');
+
+  setTimeout(() => {
+    if (token !== morphToken) return;
+    let fired = false;
+    const done = () => {
+      if (fired || token !== morphToken) return;
+      fired = true;
+      const { w: w1, h: h1 } = fitSize(sprite);
+      /* 从旧尺寸平滑补间到新尺寸 */
+      sprite.style.width = w0 + 'px'; sprite.style.height = h0 + 'px';
+      void sprite.offsetWidth;                                              // 强制回流，锁起始值
+      requestAnimationFrame(() => {
+        sprite.style.width = w1 + 'px'; sprite.style.height = h1 + 'px';
+      });
+      sprite.classList.remove('swap-out');
+      sprite.classList.add('swap-in');
+      setTimeout(() => {
+        if (token !== morphToken) return;
+        sprite.classList.remove('swap-in');
+        sprite.style.width = ''; sprite.style.height = '';                  // 恢复 max 约束（此刻值一致，无跳变）
+        wrap.classList.remove('morphing');
+      }, 380);
+    };
+    sprite.onload = done;
+    sprite.src = `pet_sprites/${s}.png`;
+    if (sprite.complete && sprite.naturalWidth) done();                     // 缓存命中时 onload 可能不再触发
+  }, 150);
+}
+
+function say(text, ms = 2800){
+  clearTimeout(bubbleTimer);
+  bubbleEl.textContent = text;
+  bubbleEl.classList.add('show');
+  bubbleTimer = setTimeout(() => bubbleEl.classList.remove('show'), ms);
+}
+
+/* 临时情绪：结束回到基础态 */
+function mood(s, ms = 2400){
+  clearTimeout(moodTimer);
+  setState(s);
+  moodTimer = setTimeout(() => setState(baseState()), ms);
+}
+
+/* ---------- 行为引擎：待机时每 7~14 秒自发一个小动作 ---------- */
+function scheduleAct(){
+  clearTimeout(actTimer);
+  actTimer = setTimeout(() => {
+    if (stage.className === 'st-idle'){
+      const acts = ['act-glance', 'act-lookback', 'act-hop', 'act-stretch'];
+      const a = pick(acts);
+      wrap.classList.add(a); sprite.classList.add(a);
+      setTimeout(() => { wrap.classList.remove(a); sprite.classList.remove(a); }, 1500);
+      if (a === 'act-hop') say(pick(['嗯～伸个懒腰。', '活动活动筋骨～', '咦，什么声音？']), 1600);
+    }
+    scheduleAct();
+  }, 7000 + Math.random() * 7000);
+}
+
+/* ---------- 点击互动：随机情绪 ---------- */
+stage.addEventListener('click', () => {
+  if (stage.classList.contains('st-sleep')) {           // 夜里被点击：短暂唤醒
+    mood('surprised', 1800);
+    say(pick(PHRASES.wake));
+    setTimeout(() => setState('sleep'), 1900);
+    return;
+  }
+  const r = Math.random();
+  const s = r < .34 ? 'happy' : r < .58 ? 'shy' : r < .80 ? 'surprised' : r < .92 ? 'wave' : 'read';
+  mood(s);
+  say(pick(PHRASES[s]));
+});
+
+/* ---------- 拖拽：拎起挣扎 → 松手回弹 ---------- */
+stage.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  mood('surprised', 3600);
+  wrap.classList.remove('landing');
+  wrap.classList.add('dragging');
+  const W = window.__TAURI__ && window.__TAURI__.window;
+  if (W){ try{ W.getCurrentWindow().startDragging(); }catch(err){} }
+});
+function endDrag(){
+  if (!wrap.classList.contains('dragging')) return;
+  wrap.classList.remove('dragging');
+  wrap.classList.add('landing');
+  setTimeout(() => { wrap.classList.remove('landing'); setState(baseState()); }, 620);
+}
+window.addEventListener('mouseup', endDrag);
+
+/* ---------- 右键：旋转退场后关闭 ---------- */
+stage.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  if (wrap.classList.contains('exit')) return;
+  wrap.classList.add('exit');
+  bubbleEl.classList.remove('show');
+  setTimeout(() => {
+    const W = window.__TAURI__ && window.__TAURI__.window;
+    if (W){ try{ W.getCurrentWindow().close(); }catch(err){} }
+    else window.close();
+  }, 420);
+});
+
+/* ---------- 与主窗口联动：朱批裁决时道贺 ---------- */
+window.addEventListener('storage', e => {
+  if (e.key === 'grdws_log' && e.newValue){
+    mood('happy');
+    say(pick(PHRASES.ruling));
+  }
+});
+
+/* ---------- 夜间自动安睡 ---------- */
+setInterval(() => { if (stage.className === 'st-idle' && isNight()) setState('sleep'); }, 60000);
+
+/* ---------- 环绕花瓣 ---------- */
+(function initPetals(){
+  const box = document.getElementById('petals');
+  for (let i = 0; i < 5; i++){
+    const p = document.createElement('span');
+    p.className = 'petal';
+    p.style.left = (12 + Math.random() * 76) + '%';
+    p.style.setProperty('--dx', (Math.random() * 60 - 30) + 'px');
+    p.style.animationDuration = (7 + Math.random() * 6) + 's';
+    p.style.animationDelay = (-Math.random() * 10) + 's';
+    box.appendChild(p);
+  }
+})();
+
+/* ---------- 启动：落地弹跳出场 → 问候 ---------- */
+setState(baseState());
+scheduleAct();
+setTimeout(() => {
+  wrap.classList.remove('enter');
+  mood('wave', 2400);
+  say(pick(PHRASES.greet) + '（右键可送我回宫哦）', 3600);
+}, 1000);
+</script>
+</body>
+</html>

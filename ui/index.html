@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>贵人多忘事 · 微政务</title>
+<title>贵人多忘事 · 为朕分忧</title>
 <style>
   :root{
     --paper:#f5efe0; --panel:#fffdf5; --line:#e2d7bf;
@@ -18,7 +18,7 @@
   .brand{padding:0 22px 20px; border-bottom:1px solid rgba(255,255,255,.18); margin-bottom:12px;}
   .brand h1{font-size:24px; letter-spacing:4px; color:#f6e7c1; font-weight:700;}
   .brand p{font-size:12px; color:#d9c9a6; margin-top:6px; letter-spacing:2px;}
-  .mod{display:flex; align-items:center; gap:10px; padding:11px 22px; cursor:pointer; color:#e9dcc0; font-size:15px; border-left:3px solid transparent; transition:.15s;}
+  .mod{display:flex; align-items:center; gap:10px; padding:11px 22px; cursor:pointer; color:#e9dcc0; font-size:15px; letter-spacing:3px; border-left:3px solid transparent; transition:.15s;}
   .mod:hover{background:rgba(255,255,255,.08);}
   .mod.active{background:rgba(255,255,255,.12); border-left-color:var(--gold); color:#fff;}
   .main{overflow-y:auto; padding:32px 40px;}
@@ -127,15 +127,15 @@
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><h1>贵人多忘事</h1><p>三省六部 · 微政务</p></div>
-    <div class="mod active" data-view="flow">📜 通政司（呈奏）</div>
-    <div class="mod" data-view="flow">👑 上朝（多臣辩论）</div>
-    <div class="mod" data-view="hu">📁 户部（文件整理）</div>
-    <div class="mod" data-view="xing">⚖️ 刑部·大理寺（审计）</div>
-    <div class="mod" data-view="log">📖 起居注（决策记录）</div>
-    <div class="mod" data-view="li">🏛️ 吏部（臣子绩效）</div>
-    <div class="mod" data-view="jian">🔔 谏院（习惯规谏）</div>
-    <div class="mod" data-view="han">📚 翰林院（知识库）</div>
+    <div class="brand"><h1>贵人多忘事</h1><p>三省六部 · 为朕分忧</p></div>
+    <div class="mod active" data-view="flow">通政司</div>
+    <div class="mod" data-view="flow">上朝</div>
+    <div class="mod" data-view="hu">户部</div>
+    <div class="mod" data-view="xing">刑部 · 大理寺</div>
+    <div class="mod" data-view="log">起居注</div>
+    <div class="mod" data-view="li">吏部</div>
+    <div class="mod" data-view="jian">谏院</div>
+    <div class="mod" data-view="han">翰林院</div>
   </aside>
   <main class="main"><div id="main-content"></div></main>
 </div>

@@ -254,7 +254,7 @@ registerView('flow', function renderFlow(){
       <button class="btn" id="submit">呈 奏</button>
       <div class="settings">
         <div class="row">
-          <span>⚡ 臣子直谏（选服务商并填 API Key 后，新议题将实时辩论；Key 仅存本机，留空则用固化数据）：</span>
+          <span>臣子直谏（选服务商并填 API Key 后，新议题将实时辩论；Key 仅存本机，留空则用固化数据）：</span>
         </div>
         <div class="row" style="margin-top:8px;">
           <select id="ds-provider">${Object.entries(PROVIDERS).map(([id,p])=>`<option value="${id}" ${st.active===id?'selected':''}>${p.name}</option>`).join('')}</select>
@@ -341,7 +341,7 @@ registerView('flow', function renderFlow(){
 function runCouncil(stage, data, question, token, apiFailed){
   window.__countDebate && window.__countDebate(); // 谏院计数
   const box = document.createElement('div');
-  box.innerHTML = `<div class="card"><h3>👑 上朝 · 多臣辩论</h3>${apiFailed?'<p class="muted-note" style="margin-bottom:10px;">⚠️ 实时议事失败，已回退固化数据。</p>':''}<div id="seats"></div></div>`;
+  box.innerHTML = `<div class="card"><h3>上朝 · 多臣辩论</h3>${apiFailed?'<p class="muted-note" style="margin-bottom:10px;">⚠️ 实时议事失败，已回退固化数据。</p>':''}<div id="seats"></div></div>`;
   stage.appendChild(box);
   const holder = box.querySelector('#seats');
 
@@ -393,7 +393,7 @@ function runCouncil(stage, data, question, token, apiFailed){
     rec.className = 'record';
     const r = data.record;
     rec.innerHTML = `
-      <div class="r-title">📜 决策记录</div>
+      <div class="r-title">决策记录</div>
       <div class="r-conf">合议信心：${Math.round(r.confidence*100)}%</div>
       <div class="answer"><b>结论：</b>${escapeHtml(r.answer)}</div>
       ${r.options_considered.length?`<h4>已考虑选项</h4><ul>${r.options_considered.map(o=>`<li><b>${escapeHtml(o.option)}</b>：${escapeHtml(o.why_not)}</li>`).join('')}</ul>`:''}
@@ -424,7 +424,7 @@ function typewrite(el, text, done, token){
 function showZhupi(stage, data, question, token){
   const z = document.createElement('div');
   z.className = 'card';
-  z.innerHTML = `<h3>✍️ 朱批（陛下裁决）</h3>
+  z.innerHTML = `<h3>朱批 · 陛下裁决</h3>
     <div class="zhupi">
       <button class="btn" data-d="准奏 · 采纳" style="margin-top:0;">准奏</button>
       <button class="btn" data-d="发回重议" style="margin-top:0;background:#8a6d1f;">发回重议</button>
@@ -454,7 +454,7 @@ function showZhupi(stage, data, question, token){
 
 /* 吏部：本局臣子表现评分（优 / 劣） */
 function renderRateArea(area, seats){
-  area.innerHTML = `<h3 style="margin-top:16px;">🏛️ 吏部 · 本局臣子考评</h3>
+  area.innerHTML = `<h3 style="margin-top:16px;">吏部 · 本局臣子考评</h3>
     ${seats.map((o,i)=>`<div class="rate-row"><span class="role">${escapeHtml(o.role)}</span>
       <button class="rate-btn up" data-i="${i}">优</button>
       <button class="rate-btn down" data-i="${i}">劣</button>

@@ -13,7 +13,8 @@ pub fn run() {
             fs_ops::hubu_organize,
             fs_ops::xingbu_ledger,
             fs_ops::xingbu_undo,
-            overlay::open_qijuzhu
+            overlay::open_qijuzhu,
+            overlay::open_pet
         ])
         .run(tauri::generate_context!())
         .expect("贵人多忘事启动失败");
