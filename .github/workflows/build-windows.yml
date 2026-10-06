@@ -39,6 +39,19 @@ jobs:
           grep -iE "error|failed|panic" -B 3 -A 6 build.log | tail -n 120 >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
+      - name: 失败时把完整日志推到 ci-logs 分支（便于公开查看）
+        if: failure()
+        shell: bash
+        run: |
+          git config user.name "ci-bot"
+          git config user.email "ci-bot@users.noreply.github.com"
+          git checkout -B ci-logs
+          mkdir -p ci-logs
+          cp build.log "ci-logs/windows-build.log"
+          git add ci-logs
+          git commit -m "build log ${{ github.run_id }}"
+          git push origin ci-logs --force
+
       - name: 上传完整构建日志
         if: failure()
         uses: actions/upload-artifact@v4
