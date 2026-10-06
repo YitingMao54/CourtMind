@@ -14,9 +14,13 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["macos-private-api"] }
+tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+# 透明窗口所需的私有 API 仅在 macOS 启用（Windows 上开启会导致构建失败）
+[target.'cfg(target_os = "macos")'.dependencies]
+tauri = { version = "2", features = ["macos-private-api"] }
 
 # 减小产物体积（对齐文档"轻量"要求）
 [profile.release]
