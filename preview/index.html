@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>浮窗 · 桌宠 皮肤适配预览</title>
+<script src="personality.js"></script>
+<style>
+  body{margin:0;padding:26px 30px;background:#20242b;color:#e8ecf3;
+       font-family:"Microsoft YaHei",system-ui,sans-serif;}
+  h1{font-size:19px;margin:0 0 6px;}
+  .tip{font-size:12.5px;color:#9aa4b2;margin-bottom:22px;line-height:1.8;}
+  .bar{display:flex;gap:9px;margin-bottom:24px;flex-wrap:wrap;}
+  .bar button{padding:8px 18px;border-radius:8px;border:1px solid #3a4250;
+       background:#2a2f38;color:#e8ecf3;font-size:14px;cursor:pointer;font-family:inherit;}
+  .bar button.on{background:#24406e;border-color:#24406e;color:#fff;}
+  .row{margin-bottom:34px;}
+  .row h2{font-size:14px;color:#9aa4b2;font-weight:400;margin:0 0 10px;letter-spacing:1px;}
+  .box{display:flex;gap:22px;align-items:flex-start;}
+  iframe{border:0;border-radius:12px;box-shadow:0 8px 26px rgba(0,0,0,.45);background:#000;display:block;}
+</style>
+</head>
+<body>
+<h1>浮窗 / 桌宠 · 三套人格皮肤适配预览</h1>
+<div class="tip">
+  下方两个 iframe 是<b>真实的浮窗页面</b>（起居注悬浮窗 340×240、桌宠 220×280）。<br>
+  切换人格后，两个窗口的<b>配色、标题、桌宠台词</b>会实时跟随——这正是修复的效果对照。<br>
+  注：iframe 内容与主窗口共享同一 localStorage，人格切换即时可见。
+</div>
+
+<div class="bar" id="bar"></div>
+
+<div class="row">
+  <h2>起居注 · 悬浮窗（真实页面，340×240）</h2>
+  <div class="box"><iframe id="f1" src="qijuzhu.html" width="340" height="240"></iframe></div>
+</div>
+
+<div class="row">
+  <h2>云绾 · 桌宠（真实页面，220×280）</h2>
+  <div class="box"><iframe id="f2" src="pet.html" width="220" height="280"></iframe></div>
+</div>
+
+<script>
+/* 注入几条裁决记录，让悬浮窗有内容可看 */
+try{
+  var log=[{time:'2026-10-09 09:12',question:'季度材料该先做哪一份？',decision:'先做预算表'},
+           {time:'2026-10-08 21:40',question:'是否启用自动归档？',decision:'先灰度两周'},
+           {time:'2026-10-08 14:05',question:'报销流程是否简化？',decision:'维持现状'}];
+  localStorage.setItem('grdws_log', JSON.stringify(log));
+}catch(e){}
+
+var bar=document.getElementById('bar');
+PERSONA_ORDER.forEach(function(id){
+  var b=document.createElement('button');
+  b.textContent=PERSONAS[id].icon+' '+PERSONAS[id].name;
+  b.dataset.id=id;
+  b.onclick=function(){ applyPersona(id); paint(); };
+  bar.appendChild(b);
+});
+function paint(){
+  var cur=readPersonaId();
+  [].forEach.call(bar.children,function(b){
+    b.classList.toggle('on', b.dataset.id===cur);
+  });
+  document.body.style.background = PERSONAS[cur].visualTheme['--paper'];
+  document.body.style.color = PERSONAS[cur].visualTheme['--ink'];
+}
+applyPersona(readPersonaId());
+paint();
+</script>
+</body>
+</html>

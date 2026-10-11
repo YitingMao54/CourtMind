@@ -1,0 +1,215 @@
+/* ================= advanced.css：人格卡片 + 行为画像（谏院） =================
+ * 依赖 personality.js 注入的 CSS 变量，随人格自动换肤。
+ */
+
+/* ---------- 人格选择页 ---------- */
+.p-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:18px; margin-bottom:22px;}
+.p-card{
+  position:relative; overflow:hidden; cursor:pointer;
+  border:1px solid var(--line); border-radius:calc(var(--radius) + 4px);
+  background:var(--panel); padding:24px 22px 20px;
+  box-shadow:0 1px 3px rgba(0,0,0,.06);
+  transition:transform .28s cubic-bezier(.22,.9,.3,1), box-shadow .28s, border-color .28s, background .35s;
+}
+.p-card::before{
+  content:''; position:absolute; inset:0 auto 0 0; width:4px;
+  background:var(--pc, var(--red)); opacity:.55; transition:opacity .28s;
+}
+.p-card::after{
+  content:''; position:absolute; right:-40px; top:-40px; width:130px; height:130px; border-radius:50%;
+  background:var(--pc, var(--red)); opacity:.07; transition:transform .5s ease;
+}
+.p-card:hover{transform:translateY(-4px); box-shadow:0 10px 26px rgba(0,0,0,.12); border-color:var(--pc,var(--red));}
+.p-card:hover::after{transform:scale(1.25);}
+.p-card.active{border-color:var(--pc,var(--red)); box-shadow:0 8px 24px rgba(0,0,0,.14);}
+.p-card.active::before{opacity:1; width:5px;}
+.p-card .p-icon{font-size:30px; line-height:1; margin-bottom:10px;}
+.p-card .p-name{font-size:19px; font-weight:700; letter-spacing:2px; color:var(--ink);}
+.p-card .p-tag{font-size:12px; color:var(--muted); letter-spacing:1px; margin-top:5px;}
+.p-card .p-intro{font-size:13px; line-height:1.85; color:var(--muted); margin:12px 0 10px; min-height:48px;}
+.p-card .p-kw{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px;}
+.p-card .p-kw span{font-size:11px; padding:2px 9px; border-radius:10px;
+  background:var(--accent-soft); color:var(--pc,var(--red-deep)); border:1px solid var(--line);}
+.p-card .p-sample{
+  font-size:13.5px; line-height:1.8; color:var(--ink);
+  background:var(--panel-2); border-left:3px solid var(--pc,var(--red));
+  padding:11px 14px; border-radius:0 6px 6px 0; min-height:52px;
+}
+.p-card .p-state{
+  margin-top:14px; display:flex; align-items:center; justify-content:space-between;
+  font-size:13px; color:var(--muted); letter-spacing:1px;
+}
+.p-card.active .p-state b{color:var(--pc,var(--red)); font-weight:700;}
+.p-card .p-state .badge{
+  font-size:11px; padding:3px 12px; border-radius:12px; border:1px solid var(--line); color:var(--muted);
+  transition:.25s;
+}
+.p-card.active .p-state .badge{background:var(--pc,var(--red)); border-color:transparent; color:var(--btn-ink);}
+/* 切换成功时的一次性脉冲 */
+.p-card.just{animation:pulse .5s ease;}
+@keyframes pulse{0%{transform:translateY(-4px) scale(1);}45%{transform:translateY(-6px) scale(1.02);}100%{transform:none;}}
+.p-note{font-size:12.5px; color:var(--muted); line-height:1.9; border-top:1px dashed var(--line); padding-top:14px;}
+.p-note b{color:var(--red-deep);}
+
+/* ---------- 行为画像：指标卡 ---------- */
+.prof-head{display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:12px;}
+.prof-range{display:flex; gap:6px;}
+.prof-range button{
+  font-family:inherit; font-size:13px; padding:6px 16px; cursor:pointer; letter-spacing:1px;
+  border:1px solid var(--line); border-radius:16px; background:var(--panel); color:var(--muted); transition:.18s;
+}
+.prof-range button:hover{border-color:var(--red); color:var(--red);}
+.prof-range button.on{background:var(--btn-bg); color:var(--btn-ink); border-color:transparent;}
+
+.m-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:14px; margin-bottom:20px;}
+.m-card{
+  position:relative; cursor:pointer; text-align:left; font-family:inherit;
+  background:var(--panel); border:1px solid var(--line); border-radius:calc(var(--radius) + 2px);
+  padding:18px 16px 14px; transition:transform .25s, box-shadow .25s, border-color .25s;
+  animation:rise .5s backwards;
+}
+@keyframes rise{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;}}
+.m-card:hover{transform:translateY(-3px); box-shadow:0 8px 20px rgba(0,0,0,.1); border-color:var(--red);}
+.m-card .m-label{font-size:12.5px; color:var(--muted); letter-spacing:2px;}
+.m-card .m-val{font-size:32px; font-weight:700; color:var(--red-deep); line-height:1.25; margin-top:6px; font-variant-numeric:tabular-nums;}
+.m-card .m-val small{font-size:15px; font-weight:400; margin-left:2px; color:var(--muted);}
+.m-card .m-trend{font-size:11.5px; margin-top:6px; letter-spacing:1px; color:var(--muted);}
+.m-card .m-trend.up{color:var(--ok);} .m-card .m-trend.down{color:var(--err);}
+.m-card .m-empty{font-size:12px; color:var(--muted); margin-top:8px; font-style:italic;}
+.m-card .m-more{font-size:11px; color:var(--gold); margin-top:8px; letter-spacing:1px;}
+.m-card.open{border-color:var(--red); background:var(--panel-2);}
+
+.m-basis{
+  border:1px dashed var(--gold); background:var(--accent-soft); border-radius:8px;
+  padding:14px 18px; margin-bottom:18px; font-size:13px; line-height:2; color:var(--ink);
+  animation:fadein .3s ease;
+}
+.m-basis .t{font-size:12px; color:var(--gold); letter-spacing:2px; margin-bottom:6px;}
+.m-basis code{font-family:inherit; color:var(--red-deep); font-weight:700;}
+
+/* 折线图 */
+.spark{width:100%; height:56px; margin-top:10px; display:block;}
+.spark path.line{fill:none; stroke:var(--red); stroke-width:2; stroke-linecap:round; stroke-linejoin:round;}
+.spark circle.pt{fill:var(--red);}
+.spark text{fill:var(--muted); font-size:9px;}
+
+/* ---------- 热力图 ---------- */
+.heat{display:flex; gap:5px; overflow-x:auto; padding:4px 0 8px;}
+.heat .hcol{display:flex; flex-direction:column; gap:4px;}
+.heat .hc{width:15px; height:15px; border-radius:3px; background:var(--line); cursor:pointer; transition:transform .15s, outline-color .15s;
+  outline:1px solid transparent;}
+.heat .hc:hover{transform:scale(1.25); outline-color:var(--ink);}
+.heat .hc.l1{background:color-mix(in srgb, var(--red) 22%, var(--panel));}
+.heat .hc.l2{background:color-mix(in srgb, var(--red) 45%, var(--panel));}
+.heat .hc.l3{background:color-mix(in srgb, var(--red) 70%, var(--panel));}
+.heat .hc.l4{background:var(--red);}
+.heat .hc.future{opacity:.28; cursor:default;}
+.heat .hc.future:hover{transform:none; outline-color:transparent;}
+.heat-x{display:flex; gap:5px; margin-bottom:4px;}
+.heat-x span{width:15px; font-size:9px; color:var(--muted); text-align:center;}
+.heat-y{display:flex; flex-direction:column; gap:4px; margin-right:6px;}
+.heat-y span{height:15px; font-size:9px; color:var(--muted); line-height:15px;}
+.heat-wrap{display:flex; align-items:flex-start;}
+.heat-legend{font-size:11px; color:var(--muted); margin-top:6px; display:flex; align-items:center; gap:5px;}
+.heat-legend i{width:13px; height:13px; border-radius:3px; display:inline-block; background:var(--line);}
+.heat-legend i.l1{background:color-mix(in srgb, var(--red) 22%, var(--panel));}
+.heat-legend i.l2{background:color-mix(in srgb, var(--red) 45%, var(--panel));}
+.heat-legend i.l3{background:color-mix(in srgb, var(--red) 70%, var(--panel));}
+.heat-legend i.l4{background:var(--red);}
+.day-detail{border:1px solid var(--gold); background:var(--accent-soft); border-radius:8px; padding:12px 16px; margin-top:10px; font-size:13px; line-height:1.9;
+  animation:fadein .3s ease;}
+.day-detail .d-t{font-weight:700; color:var(--red-deep); margin-bottom:4px;}
+
+/* ---------- 24 小时分布 ---------- */
+.hours{display:flex; align-items:flex-end; gap:3px; height:130px; padding:8px 0 0; border-bottom:1px solid var(--line);}
+.hours .hb{flex:1; min-width:4px; background:color-mix(in srgb, var(--red) 55%, var(--panel));
+  border-radius:3px 3px 0 0; position:relative; transition:.2s; min-height:2px;}
+.hours .hb.night{background:var(--gold);}
+.hours .hb:hover{filter:brightness(1.18);}
+.hours .hb::after{
+  content:attr(data-h); position:absolute; bottom:100%; left:50%; transform:translateX(-50%);
+  font-size:10px; color:var(--ink); background:var(--panel); border:1px solid var(--line);
+  padding:2px 6px; border-radius:4px; white-space:nowrap; opacity:0; pointer-events:none; transition:.15s;
+}
+.hours .hb:hover::after{opacity:1; bottom:calc(100% + 4px);}
+.hours-x{display:flex; gap:3px; margin-top:5px;}
+.hours-x span{flex:1; min-width:4px; font-size:9px; color:var(--muted); text-align:center;}
+
+/* ---------- 谏院建议（人格化） ---------- */
+.advice{
+  position:relative; border:1px solid var(--red); border-radius:calc(var(--radius) + 4px);
+  background:
+    linear-gradient(180deg, var(--accent-soft), transparent 62%),
+    var(--panel);
+  padding:22px 26px; margin-bottom:16px;
+  box-shadow:0 4px 16px rgba(0,0,0,.08);
+  animation:slideL .5s cubic-bezier(.22,.9,.3,1) backwards;
+}
+@keyframes slideL{from{opacity:0; transform:translateX(-26px);} to{opacity:1; transform:none;}}
+.advice .a-seal{
+  position:absolute; right:20px; top:16px; font-size:11px; letter-spacing:3px;
+  color:var(--red); border:1px solid var(--red); border-radius:4px; padding:5px 10px;
+  transform:rotate(-6deg); opacity:.85; background:var(--panel);
+}
+.advice .a-title{font-size:19px; font-weight:700; letter-spacing:3px; color:var(--red-deep);}
+.advice .a-item{margin-top:16px; padding-left:14px; border-left:2px solid var(--gold);}
+.advice .a-item + .a-item{margin-top:14px;}
+.advice .a-fact{font-size:14px; line-height:1.9; color:var(--ink);}
+.advice .a-fact.warn{color:var(--err);}
+.advice .a-act{font-size:13.5px; line-height:1.9; color:var(--muted); margin-top:6px;}
+.advice .a-act b{color:var(--red-deep);}
+.advice .a-foot{margin-top:18px; padding-top:12px; border-top:1px dashed var(--line);
+  font-size:12px; color:var(--muted); text-align:right; letter-spacing:1px;}
+
+/* ---------- 结论条目 ---------- */
+.ins-list{list-style:none;}
+.ins-list li{
+  display:flex; gap:10px; align-items:flex-start; font-size:14px; line-height:1.9;
+  padding:11px 0; border-bottom:1px dashed var(--line); animation:rise .45s backwards;
+}
+.ins-list li:last-child{border-bottom:none;}
+.ins-list .dot{flex:0 0 auto; font-weight:700;}
+.ins-list li.good .dot{color:var(--ok);} .ins-list li.warn .dot{color:var(--err);}
+.ins-list li.info .dot{color:var(--gold);}
+
+/* ---------- 任务清单（画像页内闭环） ---------- */
+.tk-row{display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px dashed var(--line); font-size:14px;}
+.tk-row input[type=checkbox]{width:16px; height:16px; accent-color:var(--red); cursor:pointer; flex:0 0 auto;}
+.tk-row .tk-t{flex:1; line-height:1.6;}
+.tk-row.done .tk-t{text-decoration:line-through; color:var(--muted);}
+.tk-row .tk-d{font-size:11.5px; color:var(--muted); white-space:nowrap;}
+.tk-row .tk-d.over{color:var(--err);}
+.tk-row .tk-x{background:none; border:none; color:var(--muted); cursor:pointer; font-size:15px; padding:2px 6px;}
+.tk-row .tk-x:hover{color:var(--err);}
+.tk-add{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
+.tk-add input,.tk-add button{font-family:inherit; font-size:13.5px; border:1px solid var(--line); border-radius:8px;
+  padding:8px 12px; background:var(--input-bg); color:var(--ink);}
+.tk-add input[type=text]{flex:1; min-width:220px;}
+.tk-add input[type=date]{flex:0 0 auto;}
+.tk-add button{cursor:pointer; background:var(--btn-bg); color:var(--btn-ink); border:none; letter-spacing:1px;}
+.tk-add button:hover{background:var(--btn-bg-hover);}
+
+.empty{padding:34px 20px; text-align:center; color:var(--muted); font-size:14px; line-height:2;}
+.empty b{color:var(--red-deep);}
+
+/* ---------- 页内区块标题 ---------- */
+.sec-t{display:flex; align-items:center; gap:10px; font-size:15px; letter-spacing:2px;
+  color:var(--red-deep); margin:26px 0 14px;}
+.sec-t::after{content:''; flex:1; height:1px; background:var(--line);}
+.sec-t .sub{font-size:11.5px; color:var(--muted); letter-spacing:1px;}
+
+/* 联邦人格：网格底纹 + 玻璃拟态 */
+html[data-persona="fed"] .main{
+  background-image:
+    linear-gradient(rgba(53,214,245,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(53,214,245,.045) 1px, transparent 1px);
+  background-size:34px 34px;
+}
+html[data-persona="fed"] .card,
+html[data-persona="fed"] .m-card,
+html[data-persona="fed"] .advice{backdrop-filter:blur(9px); background-color:color-mix(in srgb, var(--panel) 82%, transparent);}
+html[data-persona="fed"] .card{border-color:color-mix(in srgb, var(--red) 26%, var(--line));}
+html[data-persona="fed"] .brand h1{text-shadow:0 0 16px rgba(53,214,245,.45);}
+/* 公司人格：更利落的圆角与阴影 */
+html[data-persona="corp"] .card{box-shadow:0 1px 2px rgba(16,24,40,.06);}
+html[data-persona="corp"] .memorial{border-left-width:3px;}

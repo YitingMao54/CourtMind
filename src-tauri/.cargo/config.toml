@@ -1,0 +1,5 @@
+# 本机无 MSVC，使用 GNU 目标 + PATH 上的 MinGW-w64（winlibs/Strawberry 自带）作为链接器。
+# Rust 默认在 windows-gnu 下寻找 x86_64-w64-mingw32-gcc，此环境仅有 gcc，故显式指定。
+[target.x86_64-pc-windows-gnu]
+linker = "gcc"
+ar = "gcc-ar"

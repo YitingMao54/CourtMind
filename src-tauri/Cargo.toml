@@ -1,0 +1,39 @@
+[package]
+name = "guiren-duowangshi"
+version = "2.0.1"
+description = "贵人多忘事 · 微政务桌面软件"
+authors = ["ITP 组队项目"]
+edition = "2021"
+
+# Tauri v2 的 lib + main 结构
+[lib]
+name = "guiren_duowangshi_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# 兼容性修复：schemars 0.8 经由 tauri-utils 被引入并启用 preserve_order，
+# 其依赖的 indexmap 1.x 若未开启 std 特性，build 脚本不会写入 has_std cfg，
+# 导致 IndexMap 丢失 S=RandomState 默认泛型、schemars 编译报 E0107。
+# 此处显式启用 std 特性做特性统一（应用代码本身不直接使用 indexmap）。
+indexmap = { version = "1.9.3", features = ["std"] }
+# 邸报（活动聚合）：抓取 tuotuzju.com/api/events（该 API 无 CORS 头，WebView 内 fetch 不可行，
+# 必须由 Rust 侧抓取）；rustls 避免 native-tls 的 OpenSSL 依赖。
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+chrono = "0.4"
+
+# 透明窗口所需的私有 API 仅在 macOS 启用（Windows 上开启会导致构建失败）
+[target.'cfg(target_os = "macos")'.dependencies]
+tauri = { version = "2", features = [] }
+
+# 减小产物体积（对齐文档"轻量"要求）
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+opt-level = "s"

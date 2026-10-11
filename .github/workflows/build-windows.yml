@@ -1,0 +1,69 @@
+name: 构建 Windows 安装包
+
+# 推送到 GitHub 后自动构建 Windows .exe 安装包
+# 产物在 Actions 页面 → 该次运行 → Artifacts 下载
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 安装 Node 依赖
+        run: npm install
+
+      - name: 缓存 Rust 编译产物
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: 构建（NSIS 安装包 + MSI）
+        shell: bash
+        run: |
+          set -o pipefail
+          npx tauri build --config src-tauri/tauri.windows.conf.json 2>&1 | tee build.log
+
+      - name: 失败时输出错误摘要（公开可见）
+        if: failure()
+        shell: bash
+        run: |
+          echo '## 构建错误摘要' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          grep -iE "error|failed|panic" -B 3 -A 6 build.log | tail -n 120 >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: 失败时把完整日志推到 ci-logs 分支（便于公开查看）
+        if: failure()
+        shell: bash
+        run: |
+          git config user.name "ci-bot"
+          git config user.email "ci-bot@users.noreply.github.com"
+          git checkout -B ci-logs
+          mkdir -p ci-logs
+          cp build.log "ci-logs/windows-build.log"
+          git add ci-logs
+          git commit -m "build log ${{ github.run_id }}"
+          git push origin ci-logs --force
+
+      - name: 上传完整构建日志
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build-log
+          path: build.log
+
+      - name: 上传安装包
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: guiren-windows-installer
+          path: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/msi/*.msi

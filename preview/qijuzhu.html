@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>起居注 · 悬浮窗</title>
+<script src="personality.js"></script>
+<style>
+  /* 配色来自 personality.js 注入的 CSS 变量；此处只提供「无人格时的兜底」值。
+     关键：浮窗为深色卡片，正文一律用 --sidebar-ink/--sidebar-muted 系，
+     这套变量在三套人格下都保证与 --sidebar-bg 有足够对比度（不随纸墨变浅）。 */
+  :root{
+    --sidebar-bg:#5c1414; --sidebar-ink:#f3e7d0; --sidebar-muted:#d9c9a6; --sidebar-item:#e9dcc0;
+    --gold:#b8860b; --gold-soft:rgba(255,255,255,.10); --red:#7a1f1f;
+    --card-hair:rgba(255,255,255,.14); --card-fill:rgba(255,255,255,.07);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{font-family:var(--font,"Noto Serif SC","Songti SC","SimSun",serif);
+       background:var(--sidebar-bg); color:var(--sidebar-ink);
+       border-radius:12px; overflow:hidden; display:flex; flex-direction:column;
+       transition:background .35s ease, color .35s ease;}
+  header{display:flex; align-items:center; justify-content:space-between; padding:8px 12px;
+         background:var(--card-hair); cursor:grab; user-select:none;}
+  header:active{cursor:grabbing;}
+  .clock{cursor:grab;}
+  header .title{font-size:13px; letter-spacing:2px; color:var(--sidebar-ink);}
+  header button{background:none; border:none; color:var(--sidebar-muted); font-size:15px; cursor:pointer; padding:2px 6px; font-family:inherit;}
+  header button:hover{color:var(--sidebar-ink);}
+  .clock{text-align:center; padding:10px 0 4px;}
+  .clock b{font-size:30px; font-weight:700; color:var(--sidebar-ink); letter-spacing:2px;}
+  .clock span{display:block; font-size:11px; color:var(--sidebar-muted); margin-top:2px; letter-spacing:1px;}
+  .recents{flex:1; overflow-y:auto; padding:6px 14px 10px;}
+  .recents h4{font-size:11px; color:var(--gold); letter-spacing:2px; margin:6px 0;}
+  .item{border-left:3px solid var(--gold); background:var(--card-fill); border-radius:4px; padding:6px 10px; margin-bottom:6px; font-size:12px; line-height:1.6; color:var(--sidebar-ink);}
+  .item .t{color:var(--sidebar-muted); font-size:10px;}
+  .item .d{color:var(--sidebar-item); font-weight:700;}
+  .empty{font-size:12px; color:var(--sidebar-muted); text-align:center; padding:14px 0; line-height:1.8;}
+</style>
+</head>
+<body>
+<header>
+  <span class="title" id="win-title">起居注</span>
+  <button id="close" title="关闭悬浮窗（主窗口「起居注」页可随时重新打开）">✕</button>
+</header>
+<div class="clock"><b id="time">--:--</b><span id="date"></span></div>
+<div class="recents">
+  <h4 id="recent-h">近期裁决</h4>
+  <div id="list"><div class="empty">尚无记录。<br>请先在主窗口完成一次辩论与朱批。</div></div>
+</div>
+<script>
+function tick(){
+  const d = new Date(), p = n=>String(n).padStart(2,'0');
+  document.getElementById('time').textContent = `${p(d.getHours())}:${p(d.getMinutes())}`;
+  document.getElementById('date').textContent = `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 · ${['周日','周一','周二','周三','周四','周五','周六'][d.getDay()]}`;
+}
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+/* 固化数据里的字段名保持不变（不迁移已有记录），此处做防御性兜底 */
+function field(e, ...keys){ for(const k of keys){ if(e && e[k]!==undefined && e[k]!==null && e[k]!=='') return e[k]; } return''; }
+function renderList(){
+  try{
+    const log = JSON.parse(localStorage.getItem('grdws_log')) || [];
+    const v = (typeof vocab==='function') ? vocab() : {decision:'朱批'};
+    const box = document.getElementById('list');
+    const rows = log.slice(0,4).map(e=>{
+      const dec = field(e,'decision','answer','result','content');
+      return `<div class="item"><div class="t">${esc(e.time||'')}</div>${esc(e.question||e.topic||'')}<div class="d">${esc(v.decision)}：${esc(dec)}</div></div>`;
+    }).join('');
+    box.innerHTML = rows || `<div class="empty">尚无记录。<br>请先在主窗口完成一次辩论与${esc(v.decision)}。</div>`;
+  }catch(e){}
+}
+/* ---------- 人格：标题文案与配色实时跟随主窗口 ---------- */
+function syncPersonaText(){
+  try{
+    const nav = (typeof navName==='function') ? navName('qijuzhu') : '起居注';
+    document.getElementById('win-title').textContent = nav;
+    document.title = nav + ' · 悬浮窗';
+    document.getElementById('recent-h').textContent = '近期' + ((typeof vocab==='function') ? vocab().decision : '朱批');
+  }catch(e){}
+}
+syncPersonaText();
+if(typeof watchPersona === 'function') watchPersona(()=>{ syncPersonaText(); renderList(); });
+/* ---------- 自由移动与关闭 ---------- */
+(function initWindowCtl(){
+  const T = window.__TAURI__;
+  const inv = T && T.core ? T.core.invoke : null;
+  const cur = () => {
+    try { return T.window.getCurrentWindow(); }
+    catch (e) { try { return T.window.getCurrent(); } catch (e2) { return null; } }
+  };
+
+  /* 拖动：标题栏 / 时钟区按下 → 原生拖动（系统搬移窗口，不经 WebView 重绘） */
+  const startDrag = (e) => {
+    if (e.button !== 0 || e.target.closest('button')) return;
+    const w = cur();
+    if (w) w.startDragging();
+  };
+  document.querySelector('header').addEventListener('mousedown', startDrag);
+  document.querySelector('.clock').addEventListener('mousedown', startDrag);
+
+  /* 关闭：真销毁窗口，主窗口「起居注」页可随时重新打开 */
+  document.getElementById('close').addEventListener('click', () => {
+    if (inv) { inv('dismiss_overlay', { label: 'qijuzhu' }); }
+    else window.close();
+  });
+
+  /* 位置记忆：拖动停稳后上报逻辑坐标，下次启动原位重现 */
+  if (inv) {
+    let timer = null;
+    try {
+      cur().onMoved(({ payload }) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          const dpr = window.devicePixelRatio || 1;
+          inv('remember_pos', { label: 'qijuzhu', x: payload.x / dpr, y: payload.y / dpr });
+        }, 400);
+      });
+    } catch (e) {}
+  }
+})();
+
+tick(); renderList();
+setInterval(tick, 10000);
+setInterval(renderList, 30000); // 悬浮窗与主窗口共享 localStorage，定期同步
+</script>
+</body>
+</html>
